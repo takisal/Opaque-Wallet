@@ -134,7 +134,7 @@ pub async fn load_wallet(
         + &load_on_startup.to_string()
         + r#"]}"#)
         .to_string();
-
+    println!("newstr: {}", newstr);
     let client = reqwest::Client::new();
     let _resp0 = client.post(&url).body(newstr.clone()).send().await.unwrap();
     let raw_text = _resp0.text().await.unwrap();
@@ -259,7 +259,7 @@ pub async fn bump_fee(
             .to_owned()
             + &txid
             + r#"", "options":{"#;
-    if (fee_rate == 0) {
+    if fee_rate == 0 {
         newstr = newstr
             + r#""conf_target": "#
             + &conf_target.to_string()
@@ -287,14 +287,341 @@ pub async fn bump_fee(
         None => None,
     };
 }
-pub async fn dump_priv_key(mut url: String, wallet_name: String, address: String) {
+pub async fn dump_priv_key(mut url: String, wallet_name: String, address: String) -> String {
     url = url + "/wallet/" + &wallet_name;
     let newstr =
-        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "backupwallet", "params":{"address": ""#
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "dumpprivkey", "params":{"address": ""#
             .to_owned()
             + &address.to_string()
             + r#""}}"#;
 
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return obj["result"].to_string();
+}
+pub async fn dump_wallet(mut url: String, wallet_name: String, filename: String) -> String {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "dumpwallet", "params":{"filename": ""#
+            .to_owned()
+            + &filename.to_string()
+            + r#""}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return obj["result"].to_string();
+}
+pub async fn encrypt_wallet(mut url: String, wallet_name: String, passphrase: String) -> String {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "encryptwallet", "params":{"passphrase": ""#
+            .to_owned()
+            + &passphrase.to_string()
+            + r#""}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return obj["result"].to_string();
+}
+pub async fn get_addresses_by_label(
+    mut url: String,
+    wallet_name: String,
+    label: String,
+) -> Option<Map<String, Value>> {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getaddressesbylabel", "params":{"label": ""#
+            .to_owned()
+            + &label.to_string()
+            + r#""}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return match obj["result"].as_object() {
+        Some(x) => Some(x.clone()),
+        None => None,
+    };
+}
+pub async fn get_address_info(
+    mut url: String,
+    wallet_name: String,
+    address: String,
+) -> Option<Map<String, Value>> {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getaddressinfo", "params":{"address": ""#
+            .to_owned()
+            + &address.to_string() + r#""}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return match obj["result"].as_object() {
+        Some(x) => Some(x.clone()),
+        None => None,
+    };
+}
+pub async fn get_balance(
+    mut url: String,
+    wallet_name: String,
+    minconf: u32,
+    include_watchonly: bool,
+    avoid_reuse: bool,
+) -> f64 {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getbalance", "params":{"minconf": "#
+            .to_owned()
+            + &minconf.to_string()
+            + r#", "include_watchonly": "#
+            + &include_watchonly.to_string()
+            + r#", "avoid_reuse": "#
+            + &avoid_reuse.to_string()
+            + r#"}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    match obj["result"].as_f64() {
+        Some(x) => x,
+        None => {
+            println!("Error fetching balance");
+            0.0
+        }
+    }
+}
+pub async fn get_balances(mut url: String, wallet_name: String) -> Option<Map<String, Value>> {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr = r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getbalances", "params":[]}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return match obj["result"].as_object() {
+        Some(x) => Some(x.clone()),
+        None => {
+            println!("Error fetching balance");
+            None
+        }
+    };
+}
+pub async fn get_raw_change_address(
+    mut url: String,
+    wallet_name: String,
+    address_type: String,
+) -> String {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getrawchangeaddress", "params":{"address_type": ""#
+            .to_owned()
+            + &address_type.to_string()
+            + r#""}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return obj["result"].to_string();
+}
+pub async fn get_received_by_address(
+    mut url: String,
+    wallet_name: String,
+    address: String,
+    minconf: u32,
+) -> f64 {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getreceivedbyaddress", "params":{"address": ""#
+            .to_owned()
+            + &address.to_string()
+            + r#"", "minconf": "# +&minconf.to_string() + r#"}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    match obj["result"].as_f64() {
+        Some(x) => return x,
+        None => {
+            println!("Error fetching received by address");
+            return 0.0;
+        }
+    }
+}
+pub async fn get_received_by_label(
+    mut url: String,
+    wallet_name: String,
+    label: String,
+    minconf: u32,
+) -> f64 {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getreceivedbylabel", "params":{"label": ""#
+            .to_owned()
+            + &label.to_string()
+            + r#"", "minconf": "# +&minconf.to_string() + r#"}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    match obj["result"].as_f64() {
+        Some(x) => return x,
+        None => {
+            println!("Error fetching received by label");
+            return 0.0;
+        }
+    }
+}
+pub async fn get_transaction(
+    mut url: String,
+    wallet_name: String,
+    txid: String,
+    include_watchonly: bool,
+    verbose: bool,
+) -> Option<Map<String, Value>> {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getaddressinfo", "params":{"txid": ""#
+            .to_owned()
+            + &txid.to_string()
+            + r#"", "include_watchonly": "#
+            + &include_watchonly.to_string()
+            + r#", "verbose": "#
+            + &verbose.to_string()
+            + r#"}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return match obj["result"].as_object() {
+        Some(x) => Some(x.clone()),
+        None => None,
+    };
+}
+//get_unconfirmed_balance is DEPRECATED
+pub async fn get_wallet_info(mut url: String, wallet_name: String) -> Option<Map<String, Value>> {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr = r#"{"jsonrpc": "1.0", "id": "curltest", "method": "getwalletinfo", "params":[]}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return match obj["result"].as_object() {
+        Some(x) => Some(x.clone()),
+        None => None,
+    };
+}
+pub async fn import_address(
+    mut url: String,
+    wallet_name: String,
+    address: String,
+    label: String,
+    rescan: bool,
+    p2sh: bool,
+) {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "importaddress", "params":{"address": ""#
+            .to_owned()
+            + &address.to_string()
+            + r#"", "label": ""#
+            + &label.to_string()
+            + r#"", "rescan": "#
+            + &rescan.to_string()
+            + r#", "p2sh": "#
+            + &p2sh.to_string()
+            + r#"}}"#;
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+}
+pub async fn import_descriptors(
+    mut url: String,
+    wallet_name: String,
+    descriptors: String, //descriptors must be in JSON string format. See https://developer.bitcoin.org/reference/rpc/importdescriptors.html.
+) -> Option<Map<String, Value>> {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr = r#"{"jsonrpc": "1.0", "id": "curltest", "method": "importdescriptors", "params":{"descriptors": "#.to_owned()
+        + &descriptors.to_string()
+        + r#"}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return match obj["result"].as_object() {
+        Some(x) => Some(x.clone()),
+        None => None,
+    };
+}
+pub async fn import_multi(
+    mut url: String,
+    wallet_name: String,
+    requests: String, //requests must be in JSON string format. See https://developer.bitcoin.org/reference/rpc/importmulti.html.
+    options: String, //options must be in JSON string format. See https://developer.bitcoin.org/reference/rpc/importmulti.html.
+) -> Option<Map<String, Value>> {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "importmulti", "params":{"requests": "#
+            .to_owned()
+            + &requests.to_string()
+            + r#", "options": "#
+            + &options.to_string()
+            + r#"}}"#;
+
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    return match obj["result"].as_object() {
+        Some(x) => Some(x.clone()),
+        None => None,
+    };
+}
+pub async fn import_priv_key(
+    mut url: String,
+    wallet_name: String,
+    privkey: String,
+    label: String,
+    rescan: bool,
+) {
+    url = url + "/wallet/" + &wallet_name;
+    let newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "importprivkey", "params":{"privkey": ""#
+            .to_owned()
+            + &privkey.to_string()
+            + r#"", "label": ""#
+            + &label.to_string()
+            + r#"", "rescan": "#
+            + &rescan.to_string()
+            + r#"}}"#;
     let client = reqwest::Client::new();
     let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
 }

@@ -1,27 +1,105 @@
-use std::io::Write;
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-pub mod rpc_methods;
-fn main() {
-    let start = std::time::Instant::now();
-    env_logger::Builder::from_default_env()
-        .format(move |buf, rec| {
-            let t = start.elapsed().as_secs_f32();
-            writeln!(buf, "{:.03} [{}] - {}", t, rec.level(), rec.args())
-        })
-        .init();
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
-    let new_url: String = "http://__cookie__:ff8b581b7c300397ed956feb515dee30d255005502e983fcb169ede8b65c79b1@127.0.0.1:8332".to_string();
+use eframe::egui;
+mod rpc_methods;
+fn main() -> Result<(), eframe::Error> {
+    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
+        ..Default::default()
+    };
+    eframe::run_native(
+        "Opaque Wallet",
+        options,
+        Box::new(|cc| {
+            // This gives us image support:
+            egui_extras::install_image_loaders(&cc.egui_ctx);
 
-    match rt.block_on(rpc_methods::blockchain_rpcs::get_block_count(
-        new_url.clone(),
-    )) {
-        0 => println!("Error"),
-        x @ _ => println!("Block Number: {}", x),
+            Box::<WalletWindow>::default()
+        }),
+    )
+}
+
+struct WalletWindow {
+    name: String,
+    age: u32,
+    balance: f64,
+    wallet_loaded: bool,
+    rec_addrs: Vec<String>,
+}
+
+impl Default for WalletWindow {
+    fn default() -> Self {
+        Self {
+            name: "rusttestie".to_owned(),
+            age: 42,
+            balance: 0.0,
+            wallet_loaded: false,
+            rec_addrs: Vec::new(),
+        }
     }
-    match rt.block_on(rpc_methods::wallet_rpcs::abort_rescan(
-        new_url.clone(),
-        "rusttestie".to_owned(),
-    )) {
-        x @ _ => println!("Aborted rescan: {}", x),
+}
+
+impl eframe::App for WalletWindow {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("Load Wallet:");
+            ui.horizontal(|ui| {
+                let name_label = ui.label("Directory Wallet file is in: ");
+                ui.text_edit_singleline(&mut self.name)
+                    .labelled_by(name_label.id);
+            });
+            if ui.button("Load Wallet").clicked() {
+                let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+                //call load wallet function
+                let rpcurl = String::from("");
+                match rt.block_on(rpc_methods::wallet_rpcs::load_wallet(
+                    rpcurl,
+                    "rusttestie".to_string(),
+                    false,
+                )) {
+                    Some(x) => {
+                        let d = x["name"].to_string();
+                        println!("Loaded: {}", d.clone());
+                        self.name = d.clone();
+                        self.wallet_loaded = true;
+                    }
+                    None => {
+                        println!("not loaded");
+                        self.wallet_loaded = false;
+                    }
+                }
+            }
+            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
+            if ui.button("Show new receive address").clicked() {
+                let mut rt = tokio::runtime::Runtime::new().unwrap();
+                let rpcurl = String::from("");
+                match rt.block_on(rpc_methods::wallet_rpcs::get_new_address(
+                    rpcurl,
+                    self.name.to_string(),
+                    "".to_string(),
+                    String::from(""),
+                )) {
+                    x @ _ => {
+                        println!("New address: {}", x);
+                        self.rec_addrs.push(x);
+                    }
+                }
+            }
+            ui.label(format!(
+                "Wallet '{}',  balance: {}",
+                self.name, self.balance
+            ));
+            for addr in &self.rec_addrs {
+                ui.label(format!("Address '{}'", addr.clone()));
+
+                if ui.button("📋").on_hover_text("Click to copy").clicked() {
+                    ui.output_mut(|po| {
+                        po.copied_text = addr.clone();
+                    });
+                }
+            }
+        });
     }
 }
