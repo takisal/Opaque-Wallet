@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
-
+#![allow(dead_code)]
 use eframe::egui;
 mod rpc_methods;
 fn main() -> Result<(), eframe::Error> {
@@ -26,6 +26,10 @@ struct WalletWindow {
     balance: f64,
     wallet_loaded: bool,
     rec_addrs: Vec<String>,
+    current_recipient: String,
+    current_amount: f64,
+    sent_txs: Vec<String>,
+    current_amount_string: String,
 }
 
 impl Default for WalletWindow {
@@ -36,6 +40,10 @@ impl Default for WalletWindow {
             balance: 0.0,
             wallet_loaded: false,
             rec_addrs: Vec::new(),
+            current_recipient: String::from(""),
+            current_amount: 0.0,
+            sent_txs: Vec::new(),
+            current_amount_string: String::from(""),
         }
     }
 }
@@ -88,17 +96,70 @@ impl eframe::App for WalletWindow {
                 }
             }
             ui.label(format!(
-                "Wallet '{}',  balance: {}",
-                self.name, self.balance
+                "Wallet '{}',  balance: {}, amountToSend: {}",
+                self.name,
+                self.balance,
+                self.current_amount.to_string()
             ));
             for addr in &self.rec_addrs {
-                ui.label(format!("Address '{}'", addr.clone()));
+                ui.horizontal(|ui| {
+                    let addr_row = ui.label(format!("Address: '{}'", addr.clone()));
 
-                if ui.button("📋").on_hover_text("Click to copy").clicked() {
-                    ui.output_mut(|po| {
-                        po.copied_text = addr.clone();
-                    });
+                    if ui
+                        .button("📋")
+                        .on_hover_text("Click to copy")
+                        .labelled_by(addr_row.id)
+                        .clicked()
+                    {
+                        ui.output_mut(|po| {
+                            po.copied_text = addr.clone();
+                        });
+                    }
+                });
+            }
+
+            ui.horizontal(|ui| {
+                let recipient_label = ui.label("Send to: ");
+                ui.text_edit_singleline(&mut self.current_recipient)
+                    .labelled_by(recipient_label.id);
+                let amount_label = ui.label("Amount: ");
+                ui.text_edit_singleline(&mut self.current_amount_string)
+                    .labelled_by(amount_label.id);
+                let parsed_amount = match self.current_amount_string.clone().parse::<f64>() {
+                    Ok(number) => number,
+                    Err(_) => 0.0,
+                };
+                self.current_amount = parsed_amount;
+            });
+            if ui.button("Send").clicked() {
+                let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+                //call load wallet function
+                let rpcurl = String::from("");
+                match rt.block_on(rpc_methods::wallet_rpcs::send_to_address(
+                    rpcurl,
+                    "rusttestie".to_string(),
+                    self.current_recipient.clone(),
+                    self.current_amount,
+                    "".to_string(),
+                    "".to_string(),
+                    false,
+                    true,
+                    1,
+                    "conservative".to_string(),
+                    false,
+                    0,
+                    true,
+                )) {
+                    x => {
+                        println!("TXID: {}", x);
+                        self.sent_txs.push(x);
+                    }
                 }
+            }
+
+            for tx in &self.sent_txs {
+                ui.label(format!("TX ID:  '{}'", tx.clone(),));
             }
         });
     }
