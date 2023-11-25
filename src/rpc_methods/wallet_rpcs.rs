@@ -31,6 +31,7 @@ pub async fn create_wallet(
     let client = reqwest::Client::new();
     let _resp0 = client.post(&url).body(newstr.clone()).send().await.unwrap();
     let raw_text = _resp0.text().await.unwrap();
+    println!("Rawtxt: {}", raw_text);
     let parsed: Value = serde_json::from_str(&raw_text).unwrap();
     let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
 
@@ -392,10 +393,11 @@ pub async fn get_balance(
             + r#", "avoid_reuse": "#
             + &avoid_reuse.to_string()
             + r#"}}"#;
-
+    println!("newstr: {}", (newstr.clone()));
     let client = reqwest::Client::new();
     let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
     let raw_text = _resp0.text().await.unwrap();
+    println!("raw_text: {}", (raw_text.clone()));
     let parsed: Value = serde_json::from_str(&raw_text).unwrap();
     let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
     match obj["result"].as_f64() {

@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(dead_code)]
+
 use eframe::egui;
 mod rpc_methods;
 fn main() -> Result<(), eframe::Error> {
@@ -30,6 +31,7 @@ struct WalletWindow {
     current_amount: f64,
     sent_txs: Vec<String>,
     current_amount_string: String,
+    check_balance: bool,
 }
 
 impl Default for WalletWindow {
@@ -44,34 +46,36 @@ impl Default for WalletWindow {
             current_amount: 0.0,
             sent_txs: Vec::new(),
             current_amount_string: String::from(""),
+            check_balance: false,
         }
     }
 }
 
 impl eframe::App for WalletWindow {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let rpcurl = String::from("");
+
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Load Wallet:");
+            ui.heading("Load/Create Wallet:");
             ui.horizontal(|ui| {
-                let name_label = ui.label("Directory Wallet file is in: ");
+                let name_label = ui.label("Wallet name: ");
                 ui.text_edit_singleline(&mut self.name)
                     .labelled_by(name_label.id);
             });
-            if ui.button("Load Wallet").clicked() {
+            if ui.button("Load").clicked() {
                 let mut rt = tokio::runtime::Runtime::new().unwrap();
-
                 //call load wallet function
-                let rpcurl = String::from("");
+
                 match rt.block_on(rpc_methods::wallet_rpcs::load_wallet(
-                    rpcurl,
-                    "rusttestie".to_string(),
+                    rpcurl.clone(),
+                    self.name.to_string(),
                     false,
                 )) {
                     Some(x) => {
                         let d = x["name"].to_string();
                         println!("Loaded: {}", d.clone());
-                        self.name = d.clone();
                         self.wallet_loaded = true;
+                        self.check_balance = true;
                     }
                     None => {
                         println!("not loaded");
@@ -79,12 +83,52 @@ impl eframe::App for WalletWindow {
                     }
                 }
             }
+            if self.check_balance == true {
+                self.check_balance = false;
+                let mut rt = tokio::runtime::Runtime::new().unwrap();
+                match rt.block_on(rpc_methods::wallet_rpcs::get_balance(
+                    rpcurl.clone(),
+                    self.name.clone(),
+                    1,
+                    false,
+                    false,
+                )) {
+                    x => {
+                        self.balance = x;
+                    }
+                }
+            }
+            if ui.button("Refresh balance").clicked() {
+                self.check_balance = true
+            }
+            if ui.button("Create").clicked() {
+                let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+                //call load wallet function
+
+                match rt.block_on(rpc_methods::wallet_rpcs::create_wallet(
+                    rpcurl.clone(),
+                    self.name.to_string(),
+                    false,
+                    false,
+                    "".to_string(),
+                    false,
+                    false,
+                    false,
+                )) {
+                    x => {
+                        println!("Loaded: {}", x.clone());
+                        self.wallet_loaded = true;
+                        self.check_balance = true;
+                    }
+                }
+            }
             ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
             if ui.button("Show new receive address").clicked() {
                 let mut rt = tokio::runtime::Runtime::new().unwrap();
-                let rpcurl = String::from("");
+
                 match rt.block_on(rpc_methods::wallet_rpcs::get_new_address(
-                    rpcurl,
+                    rpcurl.clone(),
                     self.name.to_string(),
                     "".to_string(),
                     String::from(""),
@@ -96,10 +140,8 @@ impl eframe::App for WalletWindow {
                 }
             }
             ui.label(format!(
-                "Wallet '{}',  balance: {}, amountToSend: {}",
-                self.name,
-                self.balance,
-                self.current_amount.to_string()
+                "Wallet '{}',  balance: {}",
+                self.name, self.balance
             ));
             for addr in &self.rec_addrs {
                 ui.horizontal(|ui| {
@@ -134,11 +176,9 @@ impl eframe::App for WalletWindow {
             if ui.button("Send").clicked() {
                 let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-                //call load wallet function
-                let rpcurl = String::from("");
                 match rt.block_on(rpc_methods::wallet_rpcs::send_to_address(
                     rpcurl,
-                    "rusttestie".to_string(),
+                    self.name.to_string(),
                     self.current_recipient.clone(),
                     self.current_amount,
                     "".to_string(),
