@@ -617,7 +617,7 @@ pub async fn import_priv_key(
     url = url + "/wallet/" + &wallet_name;
     let newstr =
         r#"{"jsonrpc": "1.0", "id": "curltest", "method": "importprivkey", "params":{"privkey": ""#
-            .to_owned()
+            .to_string()
             + &privkey.to_string()
             + r#"", "label": ""#
             + &label.to_string()
@@ -626,4 +626,49 @@ pub async fn import_priv_key(
             + r#"}}"#;
     let client = reqwest::Client::new();
     let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    return;
+}
+pub async fn list_transactions(
+    mut url: String,
+    wallet_name: String,
+    label: String,
+    count: u32,
+    include_watchonly: bool,
+) -> Vec<crate::Transaction> {
+    url = url + "/wallet/" + &wallet_name;
+    let mut newstr =
+        r#"{"jsonrpc": "1.0", "id": "curltest", "method": "listtransactions", "params":{"#
+            .to_string();
+    let label_section = r#""label": ""#.to_owned() + &label + r#"""#;
+    let count_section = r#""count": "#.to_owned() + &count.to_string();
+    if label != "" && count != 0 {
+        newstr = newstr + &label_section + ", " + &count_section + ", "
+    } else if label != "" {
+        newstr = newstr + &label_section + ", "
+    } else if count != 0 {
+        newstr = newstr + &count_section + ", "
+    }
+    newstr = newstr + r#""include_watchonly": "# + &include_watchonly.to_string() + r#"}}"#;
+    println!("newstr: {}", newstr);
+    println!("walletname: {}", wallet_name);
+    let client = reqwest::Client::new();
+    let _resp0 = client.post(&url).body(newstr).send().await.unwrap();
+    let raw_text = _resp0.text().await.unwrap();
+    println!("raw_text: {}", raw_text);
+    let parsed: Value = serde_json::from_str(&raw_text).unwrap();
+    let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
+    let k = <Vec<crate::Transaction> as serde::Deserialize>::deserialize(obj["result"].clone());
+    return match k {
+        Ok(x) => x,
+        Err(e) => {
+            println!("Failed decode {}", e);
+            return Vec::<crate::Transaction>::new();
+        }
+    };
+
+    /*
+    return match obj["result"].as_array() {
+        Some(x) => Some(x.clone()),
+        None => None,
+    };*/
 }
