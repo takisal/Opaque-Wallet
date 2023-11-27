@@ -12,7 +12,7 @@ fn main() -> Result<(), eframe::Error> {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
         ..Default::default()
     };
-    let file_path_stem = "/mnt/WD_BLACK/btcnodedata";
+    let file_path_stem = "";
     let file_path = &(file_path_stem.to_string() + "/.cookie");
     println!("In file {}", file_path);
 
