@@ -634,7 +634,7 @@ pub async fn list_transactions(
     label: String,
     count: u32,
     include_watchonly: bool,
-) -> Vec<crate::Transaction> {
+) -> Vec<crate::helpers::helpers::Transaction> {
     url = url + "/wallet/" + &wallet_name;
     let mut newstr =
         r#"{"jsonrpc": "1.0", "id": "curltest", "method": "listtransactions", "params":{"#
@@ -657,12 +657,14 @@ pub async fn list_transactions(
     println!("raw_text: {}", raw_text);
     let parsed: Value = serde_json::from_str(&raw_text).unwrap();
     let obj: Map<String, Value> = parsed.as_object().unwrap().clone();
-    let k = <Vec<crate::Transaction> as serde::Deserialize>::deserialize(obj["result"].clone());
+    let k = <Vec<crate::helpers::helpers::Transaction> as serde::Deserialize>::deserialize(
+        obj["result"].clone(),
+    );
     return match k {
         Ok(x) => x,
         Err(e) => {
             println!("Failed decode {}", e);
-            return Vec::<crate::Transaction>::new();
+            return Vec::<crate::helpers::helpers::Transaction>::new();
         }
     };
 

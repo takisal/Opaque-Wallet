@@ -1,0 +1,257 @@
+use crate::helpers;
+use crate::rpc_methods;
+use eframe::egui;
+pub struct WalletWindow {
+    pub(crate) name: String,
+    pub(crate) age: u32,
+    pub(crate) balance: f64,
+    pub(crate) wallet_loaded: bool,
+    pub(crate) rec_addrs: Vec<String>,
+    pub(crate) current_recipient: String,
+    pub(crate) current_amount: f64,
+    pub(crate) sent_txs: Vec<String>,
+    pub(crate) current_amount_string: String,
+    pub(crate) check_balance: bool,
+    pub(crate) rpc_url: String,
+    pub(crate) check_past_txs: bool,
+    pub(crate) sends: Vec<helpers::helpers::Transaction>,
+    pub(crate) receives: Vec<helpers::helpers::Transaction>,
+    pub(crate) history_view: bool,
+    pub(crate) default_view: bool,
+    pub(crate) greeting_view: bool,
+}
+
+impl Default for WalletWindow {
+    fn default() -> Self {
+        Self {
+            name: "rusttestie".to_owned(),
+            age: 42,
+            balance: 0.0,
+            wallet_loaded: false,
+            rec_addrs: Vec::new(),
+            current_recipient: String::from(""),
+            current_amount: 0.0,
+            sent_txs: Vec::new(),
+            current_amount_string: String::from(""),
+            check_balance: false,
+            rpc_url: String::from(""),
+            check_past_txs: false,
+            sends: Vec::new(),
+            receives: Vec::new(),
+            history_view: false,
+            default_view: false,
+            greeting_view: false,
+        }
+    }
+}
+impl eframe::App for WalletWindow {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            if self.check_past_txs == true {
+                self.check_past_txs = false;
+                helpers::helpers::initialize_wallet(
+                    self.rpc_url.clone(),
+                    self.name.to_string(),
+                    "".to_string(),
+                    100,
+                    false,
+                    &mut self.sends,
+                    &mut self.receives,
+                );
+            }
+
+            if self.check_balance == true {
+                self.check_balance = false;
+                let mut rt = tokio::runtime::Runtime::new().unwrap();
+                match rt.block_on(rpc_methods::wallet_rpcs::get_balance(
+                    self.rpc_url.clone(),
+                    self.name.clone(),
+                    1,
+                    false,
+                    false,
+                )) {
+                    x => {
+                        self.balance = x;
+                    }
+                }
+            }
+            if self.greeting_view {
+                ui.heading("Load/Create Wallet:");
+                ui.horizontal(|ui| {
+                    let name_label = ui.label("Wallet name: ");
+
+                    ui.text_edit_singleline(&mut self.name)
+                        .labelled_by(name_label.id);
+                });
+                ui.horizontal(|ui| {
+                    if ui.button("Load").clicked() {
+                        let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+                        match rt.block_on(rpc_methods::wallet_rpcs::load_wallet(
+                            self.rpc_url.clone(),
+                            self.name.to_string(),
+                            false,
+                        )) {
+                            Some(x) => {
+                                let d = x["name"].to_string();
+                                println!("Loaded: {}", d.clone());
+                                self.wallet_loaded = true;
+                                self.check_balance = true;
+                                self.check_past_txs = true;
+                                self.greeting_view = false;
+                                self.default_view = true;
+                            }
+                            None => {
+                                println!("not loaded");
+                            }
+                        }
+                    }
+
+                    if ui.button("Create").clicked() {
+                        let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+                        match rt.block_on(rpc_methods::wallet_rpcs::create_wallet(
+                            self.rpc_url.clone(),
+                            self.name.to_string(),
+                            false,
+                            false,
+                            "".to_string(),
+                            false,
+                            false,
+                            false,
+                        )) {
+                            x => {
+                                println!("Loaded: {}", x.clone());
+                                self.wallet_loaded = true;
+                                self.check_balance = true;
+                                self.check_past_txs = true;
+                                self.greeting_view = false;
+                                self.default_view = true;
+                            }
+                        }
+                    }
+                });
+                if ui.button("Proceed for to testing").clicked() {
+                    self.wallet_loaded = true;
+                    self.check_balance = true;
+                    self.check_past_txs = true;
+                    self.greeting_view = false;
+                    self.default_view = true;
+                }
+            } else {
+                ui.horizontal(|ui| {
+                    if ui.button("Refresh").clicked() {
+                        self.check_past_txs = true;
+                        self.check_balance = true;
+                    }
+                    if ui.button("Home").clicked() {
+                        self.default_view = true;
+                        self.history_view = false;
+                    }
+                    if ui.button("History").clicked() {
+                        self.default_view = false;
+                        self.history_view = true;
+                    }
+                });
+            }
+            if self.default_view {
+                ui.label(format!(
+                    "Wallet '{}',  Balance: {} BTC",
+                    self.name, self.balance
+                ));
+                ui.add_space(15.0);
+                if ui.button("Show new receive address").clicked() {
+                    let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+                    match rt.block_on(rpc_methods::wallet_rpcs::get_new_address(
+                        self.rpc_url.clone(),
+                        self.name.clone(),
+                        "".to_string(),
+                        String::from(""),
+                    )) {
+                        x @ _ => {
+                            println!("New address: {}", x);
+                            let mut chars = x.chars();
+                            chars.next();
+
+                            chars.next_back();
+
+                            self.rec_addrs.push(String::from(chars.as_str()));
+                        }
+                    }
+                }
+                ui.add_space(55.0);
+                ui.label("Your addresses for receiving BTC");
+                for addr in &self.rec_addrs {
+                    ui.horizontal(|row_ui| {
+                        let addr_row = row_ui.label(format!("Address: '{}'", addr.clone()));
+
+                        if row_ui
+                            .button("📋")
+                            .on_hover_text("Click to copy")
+                            .labelled_by(addr_row.id)
+                            .clicked()
+                        {
+                            row_ui.output_mut(|po| {
+                                po.copied_text = addr.clone();
+                            });
+                        }
+                    });
+                }
+                ui.add_space(15.0);
+                ui.horizontal(|ui| {
+                    let recipient_label = ui.label("Send to: ");
+                    ui.text_edit_singleline(&mut self.current_recipient)
+                        .labelled_by(recipient_label.id);
+                    let amount_label = ui.label("Amount: ");
+                    ui.text_edit_singleline(&mut self.current_amount_string)
+                        .labelled_by(amount_label.id);
+                    let parsed_amount = match self.current_amount_string.clone().parse::<f64>() {
+                        Ok(number) => number,
+                        Err(_) => 0.0,
+                    };
+                    self.current_amount = parsed_amount;
+                });
+                if ui.button("Send").clicked() {
+                    let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+                    match rt.block_on(rpc_methods::wallet_rpcs::send_to_address(
+                        self.rpc_url.clone(),
+                        self.name.clone(),
+                        self.current_recipient.clone(),
+                        self.current_amount,
+                        "".to_string(),
+                        "".to_string(),
+                        false,
+                        true,
+                        1,
+                        "conservative".to_string(),
+                        false,
+                        0,
+                        true,
+                    )) {
+                        x => {
+                            self.sent_txs.push(x);
+                        }
+                    }
+                }
+            }
+            for tx in &self.sent_txs {
+                ui.label(format!("TX ID:  '{}'", tx.clone(),));
+            }
+            if self.history_view {
+                ui.label(format!("Sent Transaction History: "));
+                for tx in &self.sends {
+                    let tx_display = serde_json::to_string(tx).unwrap();
+                    ui.label(format!("TX:  '{}'", tx_display));
+                }
+
+                ui.label(format!("Received Transaction History: "));
+                for tx in &self.receives {
+                    let tx_display = serde_json::to_string(tx).unwrap();
+                    ui.label(format!("TX:  '{}'", tx_display));
+                }
+            }
+        });
+    }
+}
