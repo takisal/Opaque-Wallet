@@ -41,11 +41,14 @@ fn main() -> Result<(), eframe::Error> {
                 check_balance: false,
                 rpc_url,
                 check_past_txs: false,
-                sends: Vec::new(),
-                receives: Vec::new(),
                 history_view: false,
                 default_view: false,
                 greeting_view: true,
+                sent_show: true,
+                receive_show: true,
+                all_transactions: Vec::new(),
+                popup: false,
+                last_transaction: String::from(""),
             })
         }),
     )

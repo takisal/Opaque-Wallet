@@ -661,16 +661,47 @@ pub async fn list_transactions(
         obj["result"].clone(),
     );
     return match k {
-        Ok(x) => x,
+        Ok(mut x) => {
+            x.reverse();
+            x
+        }
         Err(e) => {
             println!("Failed decode {}", e);
-            return Vec::<crate::helpers::helpers::Transaction>::new();
-        }
+            let mut curated_vector = Vec::<crate::helpers::helpers::Transaction>::new();
+            let p = <Vec<crate::helpers::helpers::PendingTransaction> as serde::Deserialize>::deserialize(
+                obj["result"].clone(),
+            );
+            match p {
+                Ok(y) => {
+                    for ptx in y {
+                        curated_vector.push(crate::helpers::helpers::Transaction {
+                            address: ptx.address,
+                            amount: ptx.amount,
+                            blockheight: 0,
+                            blockindex: 0,
+                            blocktime: 0,
+                            category: ptx.category,
+                            confirmations: 0,
+                            label: "".to_string(),
+                            time: ptx.time,
+                            timereceived: ptx.timereceived,
+                            txid: ptx.txid,
+                            vout: ptx.vout,
+                            walletconflicts: ptx.walletconflicts,
+                        })
+                    }
+                    curated_vector.reverse();
+                    return curated_vector;
+                }
+                Err(e) => {
+                    println!("Failed pending decode {}", e);
+                    return Vec::<crate::helpers::helpers::Transaction>::new();
+                }
+            }
+        } /*
+          return match obj["result"].as_array() {
+              Some(x) => Some(x.clone()),
+              None => None,
+          };*/
     };
-
-    /*
-    return match obj["result"].as_array() {
-        Some(x) => Some(x.clone()),
-        None => None,
-    };*/
 }

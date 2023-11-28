@@ -15,11 +15,14 @@ pub struct WalletWindow {
     pub(crate) check_balance: bool,
     pub(crate) rpc_url: String,
     pub(crate) check_past_txs: bool,
-    pub(crate) sends: Vec<helpers::helpers::Transaction>,
-    pub(crate) receives: Vec<helpers::helpers::Transaction>,
     pub(crate) history_view: bool,
     pub(crate) default_view: bool,
     pub(crate) greeting_view: bool,
+    pub(crate) sent_show: bool,
+    pub(crate) receive_show: bool,
+    pub(crate) all_transactions: Vec<helpers::helpers::Transaction>,
+    pub(crate) popup: bool,
+    pub(crate) last_transaction: String,
 }
 
 impl Default for WalletWindow {
@@ -37,17 +40,21 @@ impl Default for WalletWindow {
             check_balance: false,
             rpc_url: String::from(""),
             check_past_txs: false,
-            sends: Vec::new(),
-            receives: Vec::new(),
             history_view: false,
             default_view: false,
             greeting_view: false,
+            sent_show: true,
+            receive_show: true,
+            all_transactions: Vec::new(),
+            popup: false,
+            last_transaction: String::from(""),
         }
     }
 }
 impl eframe::App for WalletWindow {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.check_past_txs == true {
+            self.all_transactions = Vec::new();
             self.check_past_txs = false;
             helpers::helpers::initialize_wallet(
                 self.rpc_url.clone(),
@@ -55,8 +62,7 @@ impl eframe::App for WalletWindow {
                 "".to_string(),
                 100,
                 false,
-                &mut self.sends,
-                &mut self.receives,
+                &mut self.all_transactions,
             );
         }
 
@@ -222,6 +228,7 @@ impl eframe::App for WalletWindow {
                     };
                     self.current_amount = parsed_amount;
                 });
+
                 if ui.button("Send").clicked() {
                     let mut rt = tokio::runtime::Runtime::new().unwrap();
 
@@ -242,13 +249,45 @@ impl eframe::App for WalletWindow {
                     )) {
                         x => {
                             self.sent_txs.push(x);
+                            self.popup = true
                         }
                     }
                 }
             });
         }
+        crate::egui::Window::new("Sent Transaction")
+            .fixed_pos(&[100.0, 100.0])
+            .resizable(true)
+            .title_bar(true)
+            .open(&mut self.popup)
+            .collapsible(false)
+            .show(ctx, |ui2| {
+                ui2.heading("Transaction Sent");
+                ui2.label("Transaction hash: ".to_string() + &self.last_transaction)
+            });
         if self.history_view {
             egui::CentralPanel::default().show(ctx, |ui| {
+                #[derive(PartialEq)]
+                enum Enum {
+                    First,
+                    Second,
+                    Third,
+                }
+                if ui
+                    .add(egui::RadioButton::new(self.sent_show == true, "Outgoing"))
+                    .clicked()
+                {
+                    self.sent_show = !self.sent_show;
+                }
+                if ui
+                    .add(egui::RadioButton::new(
+                        self.receive_show == true,
+                        "Incoming",
+                    ))
+                    .clicked()
+                {
+                    self.receive_show = !self.receive_show;
+                }
                 ui.label(format!("Transaction History: "));
                 ui.push_id(25321, |ui| {
                     TableBuilder::new(ui)
@@ -275,43 +314,32 @@ impl eframe::App for WalletWindow {
                             });
                         })
                         .body(|mut body| {
-                            for tx in &self.receives {
-                                body.row(30.0, |mut row| {
-                                    row.col(|ui| {
-                                        ui.label("Recieved TX: ");
+                            for tx in &self.all_transactions {
+                                if (tx.category == "send" && self.sent_show)
+                                    || (tx.category == "receive" && self.receive_show)
+                                {
+                                    body.row(30.0, |mut row| {
+                                        row.col(|ui| {
+                                            if tx.category == "send" {
+                                                ui.label("Sent TX: ");
+                                            } else {
+                                                ui.label("Recieved TX: ");
+                                            }
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(tx.txid.clone());
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(tx.address.clone());
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(tx.amount.to_string());
+                                        });
+                                        row.col(|ui| {
+                                            ui.label(tx.timereceived.to_string());
+                                        });
                                     });
-                                    row.col(|ui| {
-                                        ui.label(tx.txid.clone());
-                                    });
-                                    row.col(|ui| {
-                                        ui.label(tx.address.clone());
-                                    });
-                                    row.col(|ui| {
-                                        ui.label(tx.amount.to_string());
-                                    });
-                                    row.col(|ui| {
-                                        ui.label(tx.timereceived.to_string());
-                                    });
-                                });
-                            }
-                            for tx in &self.sends {
-                                body.row(30.0, |mut row| {
-                                    row.col(|ui| {
-                                        ui.label("Sent TX: ");
-                                    });
-                                    row.col(|ui| {
-                                        ui.label(tx.txid.clone());
-                                    });
-                                    row.col(|ui| {
-                                        ui.label(tx.address.clone());
-                                    });
-                                    row.col(|ui| {
-                                        ui.label(tx.amount.to_string());
-                                    });
-                                    row.col(|ui| {
-                                        ui.label(tx.timereceived.to_string());
-                                    });
-                                });
+                                }
                             }
                         });
                 });
