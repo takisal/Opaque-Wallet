@@ -12,13 +12,12 @@ fn main() -> Result<(), eframe::Error> {
         viewport: egui::ViewportBuilder::default().with_inner_size([1280.0, 720.0]),
         ..Default::default()
     };
-    let file_path_stem = "";
+    let file_path_stem = "/mnt/WD_BLACK/btcnodedata";
     let file_path = &(file_path_stem.to_string() + "/.cookie");
     println!("In file {}", file_path);
 
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
 
-    println!("With text:\n{contents}");
     let rpc_url: String = "http://".to_string() + &contents + "@127.0.0.1:8332";
     //query list transactions and split into sent/recieved
 
