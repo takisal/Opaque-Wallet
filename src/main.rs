@@ -9,7 +9,7 @@ mod rpc_methods;
 fn main() -> Result<(), eframe::Error> {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([1280.0, 720.0]),
         ..Default::default()
     };
     let file_path_stem = "";
@@ -30,7 +30,7 @@ fn main() -> Result<(), eframe::Error> {
             egui_extras::install_image_loaders(&cc.egui_ctx);
 
             Box::new(wallet_window::wallet_window::WalletWindow {
-                name: "rusttest".to_owned(),
+                name: "rusttestie".to_owned(),
                 age: 42,
                 balance: 0.0,
                 wallet_loaded: false,

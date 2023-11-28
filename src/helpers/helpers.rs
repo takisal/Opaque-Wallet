@@ -3,8 +3,8 @@ use serde::Deserialize;
 use serde::Serialize;
 #[derive(Serialize, Deserialize)]
 pub struct Transaction {
-    address: String,
-    amount: f64,
+    pub(crate) address: String,
+    pub(crate) amount: f64,
     blockhash: String,
     blockheight: u64,
     blockindex: u64,
@@ -12,9 +12,9 @@ pub struct Transaction {
     category: String,
     confirmations: u64,
     label: String,
-    time: u64,
-    timereceived: u64,
-    txid: String,
+    pub(crate) time: u64,
+    pub(crate) timereceived: u64,
+    pub(crate) txid: String,
     vout: u64,
     walletconflicts: Vec<String>,
 }

@@ -1,6 +1,7 @@
 use crate::helpers;
 use crate::rpc_methods;
 use eframe::egui;
+use egui_extras::{Column, TableBuilder};
 pub struct WalletWindow {
     pub(crate) name: String,
     pub(crate) age: u32,
@@ -46,120 +47,129 @@ impl Default for WalletWindow {
 }
 impl eframe::App for WalletWindow {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if self.check_past_txs == true {
-                self.check_past_txs = false;
-                helpers::helpers::initialize_wallet(
-                    self.rpc_url.clone(),
-                    self.name.to_string(),
-                    "".to_string(),
-                    100,
-                    false,
-                    &mut self.sends,
-                    &mut self.receives,
-                );
-            }
+        if self.check_past_txs == true {
+            self.check_past_txs = false;
+            helpers::helpers::initialize_wallet(
+                self.rpc_url.clone(),
+                self.name.to_string(),
+                "".to_string(),
+                100,
+                false,
+                &mut self.sends,
+                &mut self.receives,
+            );
+        }
 
-            if self.check_balance == true {
-                self.check_balance = false;
-                let mut rt = tokio::runtime::Runtime::new().unwrap();
-                match rt.block_on(rpc_methods::wallet_rpcs::get_balance(
-                    self.rpc_url.clone(),
-                    self.name.clone(),
-                    1,
-                    false,
-                    false,
-                )) {
-                    x => {
-                        self.balance = x;
-                    }
+        if self.check_balance == true {
+            self.check_balance = false;
+            let mut rt = tokio::runtime::Runtime::new().unwrap();
+            match rt.block_on(rpc_methods::wallet_rpcs::get_balance(
+                self.rpc_url.clone(),
+                self.name.clone(),
+                1,
+                false,
+                false,
+            )) {
+                x => {
+                    self.balance = x;
                 }
             }
-            if self.greeting_view {
-                ui.heading("Load/Create Wallet:");
-                ui.horizontal(|ui| {
-                    let name_label = ui.label("Wallet name: ");
+        }
+        egui::TopBottomPanel::top("topsec1")
+            .exact_height(100.0)
+            .show(ctx, |ui| {
+                if self.greeting_view {
+                    ui.heading("Load/Create Wallet:");
+                    ui.horizontal(|ui| {
+                        let name_label = ui.label("Wallet name: ");
 
-                    ui.text_edit_singleline(&mut self.name)
-                        .labelled_by(name_label.id);
-                });
-                ui.horizontal(|ui| {
-                    if ui.button("Load").clicked() {
-                        let mut rt = tokio::runtime::Runtime::new().unwrap();
+                        ui.text_edit_singleline(&mut self.name)
+                            .labelled_by(name_label.id);
+                    });
+                    ui.horizontal(|ui| {
+                        if ui.button("Load").clicked() {
+                            let mut rt = tokio::runtime::Runtime::new().unwrap();
 
-                        match rt.block_on(rpc_methods::wallet_rpcs::load_wallet(
-                            self.rpc_url.clone(),
-                            self.name.to_string(),
-                            false,
-                        )) {
-                            Some(x) => {
-                                let d = x["name"].to_string();
-                                println!("Loaded: {}", d.clone());
-                                self.wallet_loaded = true;
-                                self.check_balance = true;
-                                self.check_past_txs = true;
-                                self.greeting_view = false;
-                                self.default_view = true;
-                            }
-                            None => {
-                                println!("not loaded");
-                            }
-                        }
-                    }
-
-                    if ui.button("Create").clicked() {
-                        let mut rt = tokio::runtime::Runtime::new().unwrap();
-
-                        match rt.block_on(rpc_methods::wallet_rpcs::create_wallet(
-                            self.rpc_url.clone(),
-                            self.name.to_string(),
-                            false,
-                            false,
-                            "".to_string(),
-                            false,
-                            false,
-                            false,
-                        )) {
-                            x => {
-                                println!("Loaded: {}", x.clone());
-                                self.wallet_loaded = true;
-                                self.check_balance = true;
-                                self.check_past_txs = true;
-                                self.greeting_view = false;
-                                self.default_view = true;
+                            match rt.block_on(rpc_methods::wallet_rpcs::load_wallet(
+                                self.rpc_url.clone(),
+                                self.name.to_string(),
+                                false,
+                            )) {
+                                Some(x) => {
+                                    let d = x["name"].to_string();
+                                    println!("Loaded: {}", d.clone());
+                                    self.wallet_loaded = true;
+                                    self.check_balance = true;
+                                    self.check_past_txs = true;
+                                    self.greeting_view = false;
+                                    self.default_view = true;
+                                }
+                                None => {
+                                    println!("not loaded");
+                                }
                             }
                         }
-                    }
-                });
-                if ui.button("Proceed for to testing").clicked() {
-                    self.wallet_loaded = true;
-                    self.check_balance = true;
-                    self.check_past_txs = true;
-                    self.greeting_view = false;
-                    self.default_view = true;
-                }
-            } else {
-                ui.horizontal(|ui| {
-                    if ui.button("Refresh").clicked() {
-                        self.check_past_txs = true;
+
+                        if ui.button("Create").clicked() {
+                            let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+                            match rt.block_on(rpc_methods::wallet_rpcs::create_wallet(
+                                self.rpc_url.clone(),
+                                self.name.to_string(),
+                                false,
+                                false,
+                                "".to_string(),
+                                false,
+                                false,
+                                false,
+                            )) {
+                                x => {
+                                    println!("Loaded: {}", x.clone());
+                                    self.wallet_loaded = true;
+                                    self.check_balance = true;
+                                    self.check_past_txs = true;
+                                    self.greeting_view = false;
+                                    self.default_view = true;
+                                }
+                            }
+                        }
+                    });
+                    if ui.button("Proceed for to testing").clicked() {
+                        self.wallet_loaded = true;
                         self.check_balance = true;
-                    }
-                    if ui.button("Home").clicked() {
+                        self.check_past_txs = true;
+                        self.greeting_view = false;
                         self.default_view = true;
-                        self.history_view = false;
                     }
-                    if ui.button("History").clicked() {
-                        self.default_view = false;
-                        self.history_view = true;
-                    }
-                });
-            }
-            if self.default_view {
-                ui.label(format!(
-                    "Wallet '{}',  Balance: {} BTC",
-                    self.name, self.balance
-                ));
-                ui.add_space(15.0);
+                } else {
+                    ui.horizontal(|ui| {
+                        if ui.button("Refresh").clicked() {
+                            self.check_past_txs = true;
+                            self.check_balance = true;
+                        }
+                        if ui.button("Home").clicked() {
+                            self.default_view = true;
+                            self.history_view = false;
+                        }
+                        if ui.button("History").clicked() {
+                            self.default_view = false;
+                            self.history_view = true;
+                        }
+                    });
+                }
+                if self.default_view {
+                    ui.label(format!(
+                        "Wallet '{}',  Balance: {} BTC",
+                        self.name, self.balance
+                    ));
+                    ui.add_space(15.0);
+                }
+            });
+        if self.greeting_view {
+            egui::CentralPanel::default().show(ctx, |_ui| {});
+        }
+        if self.default_view {
+            egui::CentralPanel::default().show(ctx, |ui| {
                 if ui.button("Show new receive address").clicked() {
                     let mut rt = tokio::runtime::Runtime::new().unwrap();
 
@@ -180,7 +190,7 @@ impl eframe::App for WalletWindow {
                         }
                     }
                 }
-                ui.add_space(55.0);
+
                 ui.label("Your addresses for receiving BTC");
                 for addr in &self.rec_addrs {
                     ui.horizontal(|row_ui| {
@@ -235,23 +245,77 @@ impl eframe::App for WalletWindow {
                         }
                     }
                 }
-            }
-            for tx in &self.sent_txs {
-                ui.label(format!("TX ID:  '{}'", tx.clone(),));
-            }
-            if self.history_view {
-                ui.label(format!("Sent Transaction History: "));
-                for tx in &self.sends {
-                    let tx_display = serde_json::to_string(tx).unwrap();
-                    ui.label(format!("TX:  '{}'", tx_display));
-                }
-
-                ui.label(format!("Received Transaction History: "));
-                for tx in &self.receives {
-                    let tx_display = serde_json::to_string(tx).unwrap();
-                    ui.label(format!("TX:  '{}'", tx_display));
-                }
-            }
-        });
+            });
+        }
+        if self.history_view {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                ui.label(format!("Transaction History: "));
+                ui.push_id(25321, |ui| {
+                    TableBuilder::new(ui)
+                        .column(Column::auto().resizable(true))
+                        .column(Column::initial(480.0).resizable(true))
+                        .column(Column::initial(300.0).resizable(true))
+                        .column(Column::initial(100.0).resizable(true))
+                        .column(Column::initial(200.0).resizable(true))
+                        .header(20.0, |mut header| {
+                            header.col(|ui| {
+                                ui.heading("");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Hash:");
+                            });
+                            header.col(|ui| {
+                                ui.heading("To:");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Amount:");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Time Received:");
+                            });
+                        })
+                        .body(|mut body| {
+                            for tx in &self.receives {
+                                body.row(30.0, |mut row| {
+                                    row.col(|ui| {
+                                        ui.label("Recieved TX: ");
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(tx.txid.clone());
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(tx.address.clone());
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(tx.amount.to_string());
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(tx.timereceived.to_string());
+                                    });
+                                });
+                            }
+                            for tx in &self.sends {
+                                body.row(30.0, |mut row| {
+                                    row.col(|ui| {
+                                        ui.label("Sent TX: ");
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(tx.txid.clone());
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(tx.address.clone());
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(tx.amount.to_string());
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(tx.timereceived.to_string());
+                                    });
+                                });
+                            }
+                        });
+                });
+            });
+        }
     }
 }
