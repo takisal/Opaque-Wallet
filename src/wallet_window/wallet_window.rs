@@ -81,7 +81,7 @@ impl eframe::App for WalletWindow {
                 }
             }
         }
-        egui::TopBottomPanel::top("topsec1")
+        egui::TopBottomPanel::top("top_section")
             .exact_height(100.0)
             .show(ctx, |ui| {
                 if self.greeting_view {
@@ -163,12 +163,17 @@ impl eframe::App for WalletWindow {
                         }
                     });
                 }
-                if self.default_view {
-                    ui.label(format!(
-                        "Wallet '{}',  Balance: {} BTC",
-                        self.name, self.balance
-                    ));
-                    ui.add_space(15.0);
+                if !self.greeting_view {
+                    ui.add_space(5.0);
+                    ui.label(
+                        crate::egui::RichText::new(format!("Wallet: {}", self.name))
+                            .font(crate::egui::FontId::proportional(20.0)),
+                    );
+                    ui.add_space(2.5);
+                    ui.label(
+                        crate::egui::RichText::new(format!("Balance: {} BTC", self.balance))
+                            .font(crate::egui::FontId::proportional(20.0)),
+                    );
                 }
             });
         if self.greeting_view {
@@ -197,28 +202,50 @@ impl eframe::App for WalletWindow {
                     }
                 }
 
-                ui.label("Your addresses for receiving BTC");
-                for addr in &self.rec_addrs {
-                    ui.horizontal(|row_ui| {
-                        let addr_row = row_ui.label(format!("Address: '{}'", addr.clone()));
+                if self.rec_addrs.len() > 1 {
+                    ui.label("Your addresses for receiving BTC:");
+                } else if self.rec_addrs.len() == 1 {
+                    ui.label("Your address for receiving BTC:");
+                } else {
+                    ui.label("");
+                }
+                egui::ScrollArea::vertical()
+                    .enable_scrolling(true)
+                    .min_scrolled_height(100.0)
+                    .max_height(100.0)
+                    .show(ui, |ui| {
+                        let mut rows_count = 0;
+                        for addr in &self.rec_addrs {
+                            rows_count += 1;
+                            ui.horizontal(|row_ui| {
+                                let addr_row = row_ui.label(format!("Address: '{}'", addr.clone()));
 
-                        if row_ui
-                            .button("📋")
-                            .on_hover_text("Click to copy")
-                            .labelled_by(addr_row.id)
-                            .clicked()
-                        {
-                            row_ui.output_mut(|po| {
-                                po.copied_text = addr.clone();
+                                if row_ui
+                                    .button("📋")
+                                    .on_hover_text("Click to copy")
+                                    .labelled_by(addr_row.id)
+                                    .clicked()
+                                {
+                                    row_ui.output_mut(|po| {
+                                        po.copied_text = addr.clone();
+                                    });
+                                }
                             });
                         }
+                        if rows_count < 10 {
+                            for _ in rows_count..10 {
+                                ui.label("            ");
+                            }
+                        }
                     });
-                }
-                ui.add_space(15.0);
+
                 ui.horizontal(|ui| {
                     let recipient_label = ui.label("Send to: ");
                     ui.text_edit_singleline(&mut self.current_recipient)
                         .labelled_by(recipient_label.id);
+                });
+                ui.add_space(2.0);
+                ui.horizontal(|ui| {
                     let amount_label = ui.label("Amount: ");
                     ui.text_edit_singleline(&mut self.current_amount_string)
                         .labelled_by(amount_label.id);
@@ -273,7 +300,7 @@ impl eframe::App for WalletWindow {
                     Second,
                     Third,
                 }
-                ui.horizontal_centered(|ui| {
+                ui.horizontal(|ui| {
                     if ui
                         .add(egui::RadioButton::new(self.sent_show == true, "Outgoing"))
                         .clicked()

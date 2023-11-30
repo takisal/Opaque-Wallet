@@ -9,7 +9,7 @@ mod rpc_methods;
 fn main() -> Result<(), eframe::Error> {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([1280.0, 720.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([1180.0, 420.0]),
         ..Default::default()
     };
     let file_path_stem = "/mnt/WD_BLACK/btcnodedata";
