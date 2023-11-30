@@ -273,21 +273,24 @@ impl eframe::App for WalletWindow {
                     Second,
                     Third,
                 }
-                if ui
-                    .add(egui::RadioButton::new(self.sent_show == true, "Outgoing"))
-                    .clicked()
-                {
-                    self.sent_show = !self.sent_show;
-                }
-                if ui
-                    .add(egui::RadioButton::new(
-                        self.receive_show == true,
-                        "Incoming",
-                    ))
-                    .clicked()
-                {
-                    self.receive_show = !self.receive_show;
-                }
+                ui.horizontal_centered(|ui| {
+                    if ui
+                        .add(egui::RadioButton::new(self.sent_show == true, "Outgoing"))
+                        .clicked()
+                    {
+                        self.sent_show = !self.sent_show;
+                    }
+                    if ui
+                        .add(egui::RadioButton::new(
+                            self.receive_show == true,
+                            "Incoming",
+                        ))
+                        .clicked()
+                    {
+                        self.receive_show = !self.receive_show;
+                    }
+                });
+
                 ui.label(format!("Transaction History: "));
                 ui.push_id(25321, |ui| {
                     TableBuilder::new(ui)
