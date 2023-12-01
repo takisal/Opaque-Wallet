@@ -23,6 +23,7 @@ pub struct WalletWindow {
     pub(crate) all_transactions: Vec<helpers::helpers::Transaction>,
     pub(crate) popup: bool,
     pub(crate) last_transaction: String,
+    pub(crate) wash_view: bool,
 }
 
 impl Default for WalletWindow {
@@ -48,6 +49,7 @@ impl Default for WalletWindow {
             all_transactions: Vec::new(),
             popup: false,
             last_transaction: String::from(""),
+            wash_view: false,
         }
     }
 }

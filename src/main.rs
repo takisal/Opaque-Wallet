@@ -49,6 +49,7 @@ fn main() -> Result<(), eframe::Error> {
                 all_transactions: Vec::new(),
                 popup: false,
                 last_transaction: String::from(""),
+                wash_view: false,
             })
         }),
     )
