@@ -20,7 +20,7 @@ This will generate an executable in target/release named "opaque-wallet"
 
 ## Run the development version
 
-In this repo's root directory, type:
+In this repo's root directory, in the terminal type:
 
 ```bash
 cargo run
