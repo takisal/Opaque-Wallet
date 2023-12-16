@@ -28,7 +28,7 @@ cargo run
 
 ## RPC requirements
 
-To maintain proper security, opaque-wallet must be connected to a bitcoin-core node. Usually this is ran locally unless you are using a service that offers a remote bitcoin-core client.
+For the purposes of maintaining proper security, opaque-wallet must be connected to a bitcoin-core node. Usually this is ran locally unless you are using a service that offers a remote bitcoin-core client.
 
 Must be ran from the folder that is set as the datadir of the bitcoin-core node.
 
