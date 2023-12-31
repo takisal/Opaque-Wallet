@@ -4,6 +4,7 @@
 mod helpers;
 mod wallet_window;
 use eframe::egui;
+use std::env;
 use std::fs;
 mod rpc_methods;
 fn main() -> Result<(), eframe::Error> {
@@ -12,8 +13,17 @@ fn main() -> Result<(), eframe::Error> {
         viewport: egui::ViewportBuilder::default().with_inner_size([1180.0, 420.0]),
         ..Default::default()
     };
-    let file_path_stem = "/mnt/WD_BLACK/btcnodedata";
-    let file_path = &(file_path_stem.to_string() + "/.cookie");
+    let res = env::current_dir();
+    let mut file_path_stem = String::from("");
+    match res {
+        Ok(x) => {
+            file_path_stem = x.to_str().unwrap().to_owned();
+        }
+        Err(e) => {
+            println!("Error getting working directory {}", e)
+        }
+    }
+    let file_path = file_path_stem + "/.cookie";
     println!("In file {}", file_path);
 
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
