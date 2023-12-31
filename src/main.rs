@@ -25,7 +25,7 @@ fn main() -> Result<(), eframe::Error> {
         }
     }
     let file_path = file_path_stem + "/.cookie";
-    println!("In file {}", file_path);
+    println!("Getting RPC Authentication from file: {}", file_path);
 
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
 
