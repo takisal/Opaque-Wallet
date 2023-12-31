@@ -7,6 +7,7 @@ use eframe::egui;
 use std::env;
 use std::fs;
 mod rpc_methods;
+
 fn main() -> Result<(), eframe::Error> {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {

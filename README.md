@@ -10,7 +10,7 @@ Simple Bitcoin wallet with a graphical user interface, built in Rust.
 
 ### Steps
 
-In the terminal (at root of the repo), type:
+In the terminal (at the root of the repo), type:
 
 ```bash
 cargo build --release
