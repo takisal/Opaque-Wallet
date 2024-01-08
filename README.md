@@ -6,7 +6,7 @@ Simple Bitcoin wallet with a graphical user interface, built in Rust.
 
 ### Requirements
 
-- rustc >=1.74.0
+-- rustc >=1.74.0
 
 ### Steps
 
