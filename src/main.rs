@@ -30,8 +30,8 @@ fn main() -> Result<(), eframe::Error> {
     let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
 
     let rpc_url: String = "http://".to_string() + &contents + "@127.0.0.1:8332";
-    //query list transactions and split into sent/recieved
-
+    //query and list transactions and split into sent/recieved
+    
     eframe::run_native(
         "Opaque Wallet",
         options,
